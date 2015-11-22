@@ -39,6 +39,9 @@ abstract class Figure
     abstract protected float[] triangleCoords();
     abstract protected float[] color();
     abstract protected float[] transform();
+    protected float touchCenterX() { return 0; }
+    protected float touchCenterY() { return 0; }
+    protected float touchRadiusSqure() { return 0; }
 
     public boolean validTouch(float touchingX, float touchingY, int width, int height)
     {
@@ -178,6 +181,24 @@ abstract class FigureWithScale extends FigureWithSpin
         return new float[] {vec4Cur[0], vec4Cur[1]};
     }
 
+    @Override
+    public boolean validTouch(float touchingX, float touchingY, int width, int height)
+    {
+        float touchCenter[] = {touchCenterX(), touchCenterY(), 0.0f, 1.0f};
+        float touchingPoint[] = {touchingX, touchingY, 0.0f, 1.0f};
+        float curCenter[] = new float[4];
+        float curPointing[] = new float[4];
+        float unitTransform[] = new float[16];
+        Matrix.orthoM(unitTransform, 0, 0, width, height, 0, -1, 1);
+        Matrix.multiplyMV(curCenter, 0, transform(), 0, touchCenter, 0);
+        Matrix.multiplyMV(curPointing, 0, unitTransform, 0, touchingPoint, 0);
+        float curDistanceSquare = 0.0f;
+        curDistanceSquare += (curCenter[0]-curPointing[0])*(curCenter[0]-curPointing[0]);
+        curDistanceSquare += (curCenter[1]-curPointing[1])*(curCenter[1]-curPointing[1]);
+        Log.d("validTouch", "curDistanceSquare = " + curDistanceSquare);
+        return (curDistanceSquare<=touchRadiusSqure());
+    }
+
     public FigureWithScale()
     {
         vTransform = new float[16];
@@ -203,62 +224,98 @@ final class LongIndicator extends FigureWithScale
     };
     private static float vColor[] = {0.0f, 0.0f, 0.0f, 1.0f};
 
-    private static float touchCenterX = 0.0f, touchCenterY = 0.6f, touchRadiusSqure = 0.1f;
+    protected float[] triangleCoords() { return vTriangleCoords; }
+    protected float[] color() { return vColor; }
+    protected float touchCenterX() { return 0.0f; }
+    protected float touchCenterY() { return 0.6f; }
+    protected float touchRadiusSqure() { return 0.1f; }
+}
+
+final class SpeedMark extends FigureWithScale
+{
+    private static float vTriangleCoords[] =
+    {
+        -1.0f,   -1.0f,    0.0f,
+        1.0f,    -1.0f,    0.0f,
+        0.0f,    1.0f,     0.0f
+    };
+    private static float vColor[] = {0.0f, 0.0f, 0.0f, 1.0f};
 
     protected float[] triangleCoords() { return vTriangleCoords; }
     protected float[] color() { return vColor; }
-
-    @Override
-    public boolean validTouch(float touchingX, float touchingY, int width, int height)
-    {
-        float touchCenter[] = {touchCenterX, touchCenterY, 0.0f, 1.0f};
-        float touchingPoint[] = {touchingX, touchingY, 0.0f, 1.0f};
-        float curCenter[] = new float[4];
-        float curPointing[] = new float[4];
-        float unitTransform[] = new float[16];
-        Matrix.orthoM(unitTransform, 0, 0, width, height, 0, -1, 1);
-        Matrix.multiplyMV(curCenter, 0, transform(), 0, touchCenter, 0);
-        Matrix.multiplyMV(curPointing, 0, unitTransform, 0, touchingPoint, 0);
-        float curDistanceSquare = 0.0f;
-        curDistanceSquare += (curCenter[0]-curPointing[0])*(curCenter[0]-curPointing[0]);
-        curDistanceSquare += (curCenter[1]-curPointing[1])*(curCenter[1]-curPointing[1]);
-        Log.d("validTouch", "curDistanceSquare = " + curDistanceSquare);
-        return (curDistanceSquare<=touchRadiusSqure);
-    }
+    protected float touchCenterX() { return 0.0f; }
+    protected float touchCenterY() { return 0.0f; }
+    protected float touchRadiusSqure() { return 0.1f; }
 }
 
-class FigureControl
+abstract class FigureControl
 {
-    protected boolean tracking;
+    protected int tracking;
     protected float lastX, lastY;
     protected Figure fig;
 
-    public void onDown(float x, float y, int width, int height)
+    abstract public float getVal();
+
+    public void onDown(float x, float y, int width, int height, int id)
     {
         if (! fig.validTouch(x, y, width, height)) return;
-        tracking = true;
+        tracking = id;
         lastX = x;
         lastY = y;
         Log.d("onDown", "Valid");
     }
 
-    public void onMove(float x, float y, int width, int height)
+    public void onMove(float x, float y, int width, int height, int id)
     {
-        if (!tracking) return;
+        if (tracking!=id) return;
         lastX = x;
         lastY = y;
         Log.d("onMove", "Valid");
     }
 
-    public void onUp()
+    public void onUp(int id)
     {
-        tracking = false;
+        if (tracking!=id) return;
+        tracking = -1;
         Log.d("onUp", "Valid");
     }
 
     public FigureControl(Figure _fig)
     {
         fig = _fig;
+        tracking = -1;
+    }
+}
+
+class FigureControlMoveX extends FigureControl
+{
+    double lastX;
+
+    @Override
+    public void onDown(float x, float y, int width, int height, int id)
+    {
+        super.onDown(x, y, width, height, id);
+        if (tracking==id) lastX = x/width*2-1;
+    }
+
+    @Override
+    public void onMove(float x, float y, int width, int height, int id)
+    {
+        if (tracking!=id) return;
+        double curX = x/width*2-1;
+        if (curX<-0.7 || curX>0.7) return;
+        ((FigureWithScale)fig).addScale(-(float)(curX-lastX)*10, -(float)(curX-lastX)*10, 0.0f, 0.0f);
+        Log.d("onMove", "X : " + lastX + " -> " + curX);
+        lastX = curX;
+        super.onMove(x, y, width, height, id);
+    }
+
+    @Override
+    public float getVal() { return (float)(lastX*200); }
+
+    public FigureControlMoveX(Figure _fig)
+    {
+        super(_fig);
     }
 }
 
@@ -282,22 +339,25 @@ class FigureControlSpin extends FigureControl
     }
 
     @Override
-    public void onDown(float x, float y, int width, int height)
+    public void onDown(float x, float y, int width, int height, int id)
     {
-        lastDgr = findDgr(x, y, width, height);
-        super.onDown(x, y, width, height);
+        super.onDown(x, y, width, height, id);
+        if (tracking==id) lastDgr = findDgr(x, y, width, height);
     }
 
     @Override
-    public void onMove(float x, float y, int width, int height)
+    public void onMove(float x, float y, int width, int height, int id)
     {
-        if (!tracking) return;
+        if (tracking!=id) return;
         double curDgr = findDgr(x, y, width, height);
         ((FigureWithSpin)fig).addSpin(curDgr-lastDgr);
         Log.d("onMove", "dgr : " + lastDgr + " -> " + curDgr);
         lastDgr = curDgr;
-        super.onMove(x, y, width, height);
+        super.onMove(x, y, width, height, id);
     }
+
+    @Override
+    public float getVal() { return (float)(lastDgr/180*Math.PI); }
 
     public FigureControlSpin(Figure _fig)
     {
@@ -317,10 +377,14 @@ class MyGLRenderer implements GLSurfaceView.Renderer
 
         LongIndicator mLongIndicator = new LongIndicator();
         mLongIndicator.setScale(-1.1f, 1.1f, 3.3f, -1.1f);
-        mLongIndicator.setSpin(30);
+        mLongIndicator.setSpin(-90);
 
-        figs = new Figure[] {mLongIndicator};
-        figCtrls = new FigureControl[] {new FigureControlSpin(mLongIndicator)};
+        SpeedMark mSpeedMark = new SpeedMark();
+        mSpeedMark.setScale(-10.0f, 10.0f, 6.0f, -24.0f); // don't change this scale.
+        mSpeedMark.setSpin(-90);
+
+        figs = new Figure[] {mLongIndicator, mSpeedMark};
+        figCtrls = new FigureControl[] {new FigureControlSpin(mLongIndicator), new FigureControlMoveX(mSpeedMark)};
     }
 
     public void onDrawFrame(GL10 unused)
@@ -341,6 +405,7 @@ class MyGLRenderer implements GLSurfaceView.Renderer
 public class MyGLSurfaceView extends GLSurfaceView
 {
     MyGLRenderer mRenderer;
+    Movement mMovement = new Movement();
 
     @Override
     public boolean onTouchEvent(@NonNull MotionEvent e)
@@ -349,20 +414,26 @@ public class MyGLSurfaceView extends GLSurfaceView
         for (int p=0; p<pointerCount; p++)
         {
             float x = e.getX(p), y = e.getY(p);
+            int id = e.getPointerId(p), action = e.getAction();
+            if ((action & MotionEvent.ACTION_POINTER_INDEX_MASK)>0 && (action >> MotionEvent.ACTION_POINTER_INDEX_SHIFT)!=p)
+                continue;
             for (FigureControl figCtrl : mRenderer.figCtrls)
-                switch (e.getAction())
+                switch (action & MotionEvent.ACTION_MASK)
                 {
                     case MotionEvent.ACTION_DOWN:
-                        figCtrl.onDown(x, y, getWidth(), getHeight());
+                    case MotionEvent.ACTION_POINTER_DOWN:
+                        figCtrl.onDown(x, y, getWidth(), getHeight(), id);
                         break;
                     case MotionEvent.ACTION_MOVE:
-                        figCtrl.onMove(x, y, getWidth(), getHeight());
+                        figCtrl.onMove(x, y, getWidth(), getHeight(), id);
                         break;
                     case MotionEvent.ACTION_UP:
-                        figCtrl.onUp();
+                    case MotionEvent.ACTION_POINTER_UP:
+                        figCtrl.onUp(id);
                 }
         }
         requestRender();
+        mMovement.setRequire(mRenderer.figCtrls[1].getVal(), mRenderer.figCtrls[0].getVal());
         return true;
     }
 

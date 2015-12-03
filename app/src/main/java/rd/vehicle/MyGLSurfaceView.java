@@ -248,6 +248,29 @@ final class SpeedMark extends FigureWithScale
     protected float touchRadiusSqure() { return 0.1f; }
 }
 
+final class BreakButton extends FigureWithScale
+{
+    private static float vTriangleCoords[] =
+    {
+        -1.0f,   -1.0f,    0.0f,
+        1.0f,    -1.0f,    0.0f,
+        -1.0f,   1.0f,     0.0f,
+        1.0f,    -1.0f,    0.0f,
+        -1.0f,   1.0f,     0.0f,
+        1.0f,    1.0f,     0.0f
+    };
+    private float vColor[] = {1.0f, 0.0f, 0.0f, 1.0f};
+
+    public void press() { vColor[0] = 0.5f; }
+    public void unpress() { vColor[0] = 1.0f; }
+
+    protected float[] triangleCoords() { return vTriangleCoords; }
+    protected float[] color() { return vColor; }
+    protected float touchCenterX() { return 0.0f; }
+    protected float touchCenterY() { return 0.0f; }
+    protected float touchRadiusSqure() { return 0.1f; }
+}
+
 abstract class FigureControl
 {
     protected int tracking;
@@ -311,7 +334,7 @@ class FigureControlMoveX extends FigureControl
     }
 
     @Override
-    public float getVal() { return (float)(lastX*200); }
+    public float getVal() { return (float)(lastX*2); } // -2~2 m/s
 
     public FigureControlMoveX(Figure _fig)
     {
@@ -365,6 +388,44 @@ class FigureControlSpin extends FigureControl
     }
 }
 
+class FigureControlButton extends FigureControl
+{
+    private int pressing = 0;
+
+    @Override
+    public void onDown(float x, float y, int width, int height, int id)
+    {
+        super.onDown(x, y, width, height, id);
+        pressing = 1;
+        ((BreakButton)fig).press();
+    }
+
+    @Override
+    public void onMove(float x, float y, int width, int height, int id)
+    {
+        super.onMove(x, y, width, height, id);
+        if (fig.validTouch(x, y, width, height)) return;
+        pressing = 0;
+        ((BreakButton)fig).unpress();
+    }
+
+    @Override
+    public void onUp(int id)
+    {
+        super.onUp(id);
+        pressing = 0;
+        ((BreakButton)fig).unpress();
+    }
+
+    @Override
+    public float getVal() { return pressing; }
+
+    public FigureControlButton(Figure _fig)
+    {
+        super(_fig);
+    }
+}
+
 class MyGLRenderer implements GLSurfaceView.Renderer
 {
     public Figure figs[];
@@ -383,8 +444,16 @@ class MyGLRenderer implements GLSurfaceView.Renderer
         mSpeedMark.setScale(-10.0f, 10.0f, 6.0f, -24.0f); // don't change this scale.
         mSpeedMark.setSpin(-90);
 
-        figs = new Figure[] {mLongIndicator, mSpeedMark};
-        figCtrls = new FigureControl[] {new FigureControlSpin(mLongIndicator), new FigureControlMoveX(mSpeedMark)};
+        BreakButton mBreakButton = new BreakButton();
+        mBreakButton.setScale( 5.0f, -5.0f, -6.5f, 8.5f);
+
+        figs = new Figure[] {mLongIndicator, mSpeedMark, mBreakButton};
+        figCtrls = new FigureControl[]
+        {
+                new FigureControlSpin(mLongIndicator),
+                new FigureControlMoveX(mSpeedMark),
+                new FigureControlButton(mBreakButton)
+        };
     }
 
     public void onDrawFrame(GL10 unused)
@@ -405,7 +474,8 @@ class MyGLRenderer implements GLSurfaceView.Renderer
 public class MyGLSurfaceView extends GLSurfaceView
 {
     MyGLRenderer mRenderer;
-    Movement mMovement = new Movement();
+    BluetoothChatService mChatService;
+    Movement mMovement;
 
     @Override
     public boolean onTouchEvent(@NonNull MotionEvent e)
@@ -448,5 +518,13 @@ public class MyGLSurfaceView extends GLSurfaceView
         setRenderer(mRenderer);
         // Render the view only when there is a change in the drawing data
         setRenderMode(GLSurfaceView.RENDERMODE_WHEN_DIRTY);
+    }
+
+    public MyGLSurfaceView(Context context, BluetoothChatService _ChatService)
+    {
+        this(context);
+
+        mChatService = _ChatService;
+        mMovement = new Movement(mChatService);
     }
 }

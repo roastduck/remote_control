@@ -12,20 +12,42 @@ public class Movement
     public float vLeft = 0.0f, vRight = 0.0f;
     public float vBar = 0.0f, omega = 0.0f; // positive angle means left
 
-    public void send()
+    private Runnable trySend = null;
+
+    public synchronized void send()
     {
-        // 2 m/s -> 200
-        String msg = (int)(vLeft*100) + " " + (int)(vRight*100) + " " + brk;
+        // 2 m/s -> 4000
+        // 1 m/s -> 2000 half to adapt rotating
+        String msg = "%" + (int)(vLeft*1000) + " " + (int)(vRight*1000) + " " + brk + "#";
+        Log.i("bluetooth", "sent " + msg);
         mChatService.write(msg.getBytes());
     }
 
-    public void setRequire(float v, float w)
+    public void setRequire(float v, float w, float _brk)
     {
+        brk = (int)_brk;
         vBar = v; omega = w;
         vLeft = vBar-0.5f*omega*Length;
         vRight = vBar+0.5f*omega*Length;
         Log.i("Movement set", "vLeft=" + vLeft + ",vRight=" + vRight + ",vBar=" + vBar + ",omega=" + omega);
-        send();
+        if (trySend==null) {
+            trySend = new Runnable() {
+                @Override
+                public void run() {
+                    while (true) {
+                        send();
+                        try {
+                            Thread.sleep(500);
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                }
+            };
+            Thread th = new Thread(trySend);
+            th.start();
+        }
+        //send();
     }
 
     /*

@@ -268,7 +268,7 @@ final class BreakButton extends FigureWithScale
     protected float[] color() { return vColor; }
     protected float touchCenterX() { return 0.0f; }
     protected float touchCenterY() { return 0.0f; }
-    protected float touchRadiusSqure() { return 0.1f; }
+    protected float touchRadiusSqure() { return 0.05f; }
 }
 
 abstract class FigureControl
@@ -334,7 +334,7 @@ class FigureControlMoveX extends FigureControl
     }
 
     @Override
-    public float getVal() { return (float)(lastX*2); } // -2~2 m/s
+    public float getVal() { return (float)(lastX/0.7*2); } // -2~2 m/s
 
     public FigureControlMoveX(Figure _fig)
     {
@@ -503,7 +503,7 @@ public class MyGLSurfaceView extends GLSurfaceView
                 }
         }
         requestRender();
-        mMovement.setRequire(mRenderer.figCtrls[1].getVal(), mRenderer.figCtrls[0].getVal());
+        mMovement.setRequire(mRenderer.figCtrls[1].getVal(), mRenderer.figCtrls[0].getVal(), mRenderer.figCtrls[2].getVal());
         return true;
     }
 

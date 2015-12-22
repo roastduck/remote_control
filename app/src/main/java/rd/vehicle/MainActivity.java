@@ -26,8 +26,11 @@ class MyHandler extends Handler
                 Log.i("handleMessage", "MESSAGE_STATE_CHANGE: " + msg.arg1);
                 break;
             case BluetoothChatService.MESSAGE_READ:
-                String text = String.valueOf((char[])msg.obj, 0, msg.arg1);
-                Log.i("handleMessage", "MESSAGE_READ: " + text);
+                String textRead = String.valueOf((char[])msg.obj, 0, msg.arg1);
+                Log.i("handleMessage", "MESSAGE_READ: " + textRead);
+                break;
+            case BluetoothChatService.MESSAGE_WRITE:
+                Log.i("handleMessage", "MESSAGE_READ");
                 break;
             case BluetoothChatService.MESSAGE_TOAST:
                 Toast.makeText(context,(String) msg.obj, Toast.LENGTH_SHORT).show();

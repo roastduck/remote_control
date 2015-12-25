@@ -27,8 +27,8 @@ public class Movement
     {
         brk = (int)_brk;
         vBar = v; omega = w;
-        vLeft = vBar-0.5f*omega*Length;
-        vRight = vBar+0.5f*omega*Length;
+        vLeft = vBar+2.0f*omega*Length;
+        vRight = vBar-2.0f*omega*Length;
         Log.i("Movement set", "vLeft=" + vLeft + ",vRight=" + vRight + ",vBar=" + vBar + ",omega=" + omega);
         if (trySend==null) {
             trySend = new Runnable() {

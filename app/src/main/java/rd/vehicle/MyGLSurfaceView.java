@@ -396,6 +396,7 @@ class FigureControlButton extends FigureControl
     public void onDown(float x, float y, int width, int height, int id)
     {
         super.onDown(x, y, width, height, id);
+        if (! fig.validTouch(x, y, width, height)) return;
         pressing = 1;
         ((BreakButton)fig).press();
     }

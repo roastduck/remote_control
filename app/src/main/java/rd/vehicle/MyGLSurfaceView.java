@@ -358,7 +358,8 @@ class FigureControlSpin extends FigureControl
         Matrix.invertM(invTransform, 0, unitTransform, 0);
         Matrix.multiplyMV(curOrigin, 0, invTransform, 0, oldOrigin, 0);
         Log.v("findDgr", "touching("+touchingX+","+touchingY+"), origin("+curOrigin[0]+","+curOrigin[1]+")");
-        return Math.atan2(touchingY-curOrigin[1], touchingX-curOrigin[0])/Math.PI*180;
+        return Math.atan2(touchingY-curOrigin[1], touchingX-curOrigin[0])/Math.PI*180;  //from -pi to pi, which refers to -180~+180(start from x axis)
+        //默认竖屏，故x轴指向屏幕左方
     }
 
     @Override
@@ -380,7 +381,8 @@ class FigureControlSpin extends FigureControl
     }
 
     @Override
-    public float getVal() { return (float)(lastDgr/180*Math.PI); }
+    //public float getVal() { return (float)(lastDgr/180*Math.PI); }
+    public float getVal()  {return (float)(lastDgr);}
 
     public FigureControlSpin(Figure _fig)
     {

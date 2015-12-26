@@ -397,8 +397,8 @@ class FigureControlButton extends FigureControl
     @Override
     public void onDown(float x, float y, int width, int height, int id)
     {
-        //TODO:这里直接调用父类方法，但是未定义button的width和height，故程序中出现在任何地方touch时pressing均会短暂变为1的问题
         super.onDown(x, y, width, height, id);
+		if(!fig.validTouch(x, y, width, height))	return;
         pressing = 1;
         ((BreakButton)fig).press();
     }
